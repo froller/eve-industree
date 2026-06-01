@@ -105,7 +105,7 @@ class SDEDataBase {
     #blueprints
     constructor(path) {
         if (path === undefined)
-            path = './'
+            path = './eve-online-static-data/'
         this.#types = new SDETypes(path)
         this.#groups = new SDEGroups(path)
         this.#typeMaterials = new SDETypeMaterials(path)
@@ -171,7 +171,7 @@ function getMaterialsFor(activity, type, quantity) {
 
 const SDE = new SDEDataBase();
 
-let type = SDE.Types().findByName('^Astero$')
+let type = SDE.Types().findByName(`^${process.argv[2]}$`)
 type = SDE.Types().get(11567)
 console.log(type)
 
