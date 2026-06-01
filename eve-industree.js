@@ -39,7 +39,7 @@ class SDEDataSource extends JSONL {
 
         // Strip other languages for debug
         if (this.#stripOtherLocales)
-            this.data.filter(json => {   // HACK using .filter() as .each()
+            this.data.forEach(json => {
                 let rv = json
                 if (json.name && typeof json.name === 'object')
                     rv.name = json.name[this.#stripOtherLocales]
@@ -62,6 +62,8 @@ class SDETypes extends SDEDataSource {
 
     findText(re) {
         return this.filter(t => {
+            if (!t.published)
+                return false
             if (typeof t.name === 'object') {
                 for (let lang in t.name)
                     if (t.name[lang].match(re))
@@ -74,8 +76,8 @@ class SDETypes extends SDEDataSource {
 
     findByName(re) {
         let found = this.findText(re)
-        if (found instanceof Array && found.length == 1)
-            return found[0]
+        if (found instanceof Array)
+            return found[found.length - 1]
         return found
     }
 }
@@ -92,6 +94,12 @@ class SDEGroups extends SDEDataSource {
     }
 }
 
+class SDEMarketGroups extends SDEDataSource {
+    constructor(path) {
+        super(path + 'marketGroups.jsonl')
+    }
+}
+
 class SDEBlueprints extends SDEDataSource {
     constructor(path) {
         super(path + 'blueprints.jsonl')
@@ -102,15 +110,20 @@ class SDEDataBase {
     #types
     #groups
     #typeMaterials
+    #marketGroups
     #blueprints
     constructor(path) {
+        console.group('Startup')
         if (path === undefined)
             path = './eve-online-static-data/'
+        console.info("Loading data")
         this.#types = new SDETypes(path)
         this.#groups = new SDEGroups(path)
         this.#typeMaterials = new SDETypeMaterials(path)
+        this.#marketGroups = new SDEMarketGroups(path)
         this.#blueprints = new SDEBlueprints(path)
 
+        console.info("Linking data sets")
         // Cross-linking
         this.#blueprints.data.forEach(b => {
             if (b.activities.manufacturing
@@ -122,6 +135,19 @@ class SDEDataBase {
                     t['blueprintTypeID'] = b._key
             }
         })
+
+/*
+        // Denormalizing
+        this.#types.data.forEach(t => {
+            if (t.groupID)
+                t.group = this.#groups.get(t.groupID)
+            if (t.marketGroupID)
+                t.marketGroup = this.#marketGroups.get(t.marketGroupID)
+        })
+*/
+
+        console.info('SDE database ready')
+        console.groupEnd()
     }
 
     Types() {
@@ -134,6 +160,10 @@ class SDEDataBase {
 
     TypeMaterials() {
         return this.#typeMaterials
+    }
+
+    MarketGroups() {
+        return this.#marketGroups
     }
 
     Blueprints() {
@@ -157,7 +187,7 @@ function getMaterialsFor(activity, type, quantity) {
             // Constructing new object to avoid changing one in DB
             let rv = {
                 ...m,
-                'name': mt.name,    // FIXME
+                'name': mt.name,
                 'quantity': m.quantity * quantity
             }
             if (mt.blueprintTypeID)
@@ -171,18 +201,22 @@ function getMaterialsFor(activity, type, quantity) {
 
 const SDE = new SDEDataBase();
 
-let type = SDE.Types().findByName(`^${process.argv[2]}$`)
-type = SDE.Types().get(11567)
-console.log(type)
+const re = `^${process.argv[2]}$`
+const quantity = parseInt(process.argv[3]) || 1
 
+let type = SDE.Types().findByName(re)
+if (type)
+    console.info(`Found type "${type.name}"`)
+else {
+    console.error(`No types matching /${re}/ found`)
+    process.exit(1)
+}
 
-
-let blueprint = findBlueprintFor(type)
+//let blueprint = findBlueprintFor(type)
 //console.log(blueprint)
-let blueprintType = SDE.Types().get(blueprint.blueprintTypeID)
+//let blueprintType = SDE.Types().get(blueprint.blueprintTypeID)
 //console.log(blueprintType)
-let materials = getMaterialsFor('manufacturing', type, 1)
-//console.log(materials.toJSON())
-console.log(JSON.stringify(materials,0,2))
+let materials = getMaterialsFor('manufacturing', type, quantity)
+//console.log(materials)
+console.log(JSON.stringify({'typeID': type._key, 'name': type.name, 'quantity': quantity, 'materials': materials}, undefined, 2))
 
-//console.log(SDE.Types().findText(/ara/))

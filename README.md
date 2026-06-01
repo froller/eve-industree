@@ -10,13 +10,27 @@ You need to have Node.js(R) installed on your system. Get it from [nodejs.org](h
 - Download and unzip EVE Online static data files (SDE) from [developers.eveonline.com](https://developers.eveonline.com/static-data/eve-online-static-data-latest-jsonl.zip) to `eve-online-static-data` directory.
 
 ```shell
-$ wget https://developers.eveonline.com/static-data/eve-online-static-data-latest-jsonl.zip
-$ unzip -d eve-online-static-data eve-online-static-data-latest-jsonl.zip
+wget https://developers.eveonline.com/static-data/eve-online-static-data-latest-jsonl.zip
+unzip -d eve-online-static-data eve-online-static-data-latest-jsonl.zip
 ```
 
 ## Run
+### Usage
 ```shell
-$ node eve-industree.js Astero
+node eve-industree.js <item> [<quantity>]
+```
+where:
+    `item` is the item name as it is in the game, should be enclosed with quotes if contains spaces;
+    `quantity`is the number of items to build.
+
+### Examples
+Getting materials for building 1x Astero frigate
+```shell
+node eve-industree.js Astero
+```
+Getting materials for building 1000x Scourge Heavy Assault Missile
+```shell
+node eve-industree.js "Scourge Heavy Assault Missile" 1000
 ```
 
 ## To Do
